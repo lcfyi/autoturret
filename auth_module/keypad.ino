@@ -1,10 +1,8 @@
-
-
 #include "Keypad.h"
 #include <stdlib.h>
 
-const byte Rows= 4; //number of rows on the keypad i.e. 4
-const byte Cols= 4; //number of columns on the keypad i,e, 3
+const byte Rows = 4; //number of rows on the keypad i.e. 4
+const byte Cols = 4; //number of columns on the keypad i,e, 3
 
 int numAttempts = 0;
 
@@ -43,61 +41,61 @@ void setup()
 }
 
 
-void loop()
+void loop() 
 {
-     char keypressed = kpd.getKey();
-  
-     if (keypressed != NO_KEY)        // When a key is pressed it'll run the following code.
-     { 
-       
-       String password= readKey(keypressed);    // Will read the inputs given in the keypad if false increments by 1
-       if(checkPassword(password))
-       {
-        
-         return 1;
-       }
+  char keypressed = kpd.getKey();
+  if (keypressed != NO_KEY)        // When a key is pressed it'll run the following code.
+  {
+    String password = readKey(keypressed);    // Will read the inputs given in the keypad if false increments by 1
+   
+    if(checkPassword(password))
+    {  
+      return 1;
+    }
 
-       numAttempts++;
-       
-       if (numAttempts > 5)
-       {
-          overrideState(keypressed);    // If given more than 5 attempts you must enter the override code to reset the system
-       }
-      
-     }
+    numAttempts++;
 
+    if (numAttempts > 5)
+    {
+      overrideState(keypressed);    // If given more than 5 attempts you must enter the override code to reset the system
+    }
+  }
 }
 
 String readKey(char keypressed)
 {
-      bool enter = true;
-      String password;
-        while(enter)
-        {
-          elapsed = millis()-timer;
-          if(elapsed>30000){return "666";}  // Essentially we implemented a timer in which failing to enter a code in a specifc time will increment the number of attempts
-            char key = kpd.waitForKey();//kpd.getKey();
+  bool enter = true;
+  String password;
+  while(enter)
+  {
+    elapsed = millis()-timer;
+    if(elapsed>30000)
+    {
+      return "666";
+    }  // Essentially we implemented a timer in which failing to enter a code in a specifc time will increment the number of attempts
+    
+    char key = kpd.waitForKey();//kpd.getKey();
           
-            switch(key)
-            {
-               case 'A': enter = false; break;  // Enter once done inputting codes
-               case 'C': password = ""; break;  // Clears input
-               default:
-               Serial.println(key);
-               password += key;   // Reads input and adds it to password
-             }
+    switch(key)
+    {
+      case 'A': enter = false; break;  // Enter once done inputting codes
+      case 'C': password = ""; break;  // Clears input
+      default:
+      Serial.println(key);
+      password += key;   // Reads input and adds it to password
+    }
 
-        }
+  }
 
-        return password;
+  return password;
 }
-
-
-
 
 bool checkPassword(String password)
 {
- if (password == "666"){return false;}
+  if (password == "666")
+  {
+    return false;
+  }
   for (int j=0; j < numOfPasswords ; j++)
   {
     if( database[j] == password ) // Checks entire database to see if there's a match in the inputted code
@@ -105,16 +103,16 @@ bool checkPassword(String password)
       return true; 
     }
       return false;
-  } 
+  }
 }
   
 int overrideState(char keypressed)
+{
+  while(readKey(keypressed)!=OVERRIDE)
   {
-    while(readKey(keypressed)!=OVERRIDE)
-     {
-     }  
-     numAttempts = 0;
-  }                 
+  }
+  numAttempts = 0;
+}                 
 
 
   
