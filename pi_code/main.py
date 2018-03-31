@@ -1,6 +1,7 @@
 # imports 
 from imutils.video.pivideostream import PiVideoStream # juicy threading support
 import numpy
+import math
 import time
 import cv2
 import smbus
@@ -54,9 +55,10 @@ def readSerial():
   # check serial, default state gets returned if no update or no serial connection
   if ser is None:
     return
-  ser.readline()
-  # change mode and threat
-  #XXX do something with the read line  
+  while ser.in_waiting:
+    mode_and_threat = int(ser.readline())
+    mode = mode_and_threat % 10
+    threat = int(math.floor(mode_and_threat / 10)) % 10
 
 while True:
   f = vs.read() # grab a frame from our threaded pivideostream
@@ -83,13 +85,13 @@ while True:
     elif temp is None or cv2.contourArea(c) > cv2.contourArea(temp):
       temp = c # grab the biggest contour that's within our bounds 
 
-  # update mode and threat state
-  # if ser is None:
-  #   try:
-  #     ser = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
-  #   except:
-  #     print("[NOTE] Unable to open serial connection.")
-  # readSerial()
+  update mode and threat state
+  if ser is None:
+    try:
+      ser = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
+    except:
+      print("[NOTE] Unable to open serial connection.")
+  readSerial()
 
   if temp is not None: # draw boxes around our area of interest
     (x, y, w, h) = cv2.boundingRect(temp)
