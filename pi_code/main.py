@@ -85,7 +85,7 @@ while True:
     elif temp is None or cv2.contourArea(c) > cv2.contourArea(temp):
       temp = c # grab the biggest contour that's within our bounds 
 
-  update mode and threat state
+  # update mode and threat state
   if ser is None:
     try:
       ser = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
