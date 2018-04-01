@@ -4,7 +4,10 @@
 const byte Rows = 4; //number of rows on the keypad i.e. 4
 const byte Cols = 4; //number of columns on the keypad i,e, 3
 
-int numAttempts = 0;
+int numAttempts = 5;
+char state = '1';  
+char laser = '0';
+string stateToPi;
 
 int timer = millis(); // Amount of time given to user to enter a code before being stuck in an override state
 
@@ -43,45 +46,87 @@ void setup()
 
 void loop() 
 {
+  currentState(state);
+  lcd.clear();
   char keypressed = kpd.getKey();
   if (keypressed != NO_KEY)        // When a key is pressed it'll run the following code.
   {
     String password = readKey(keypressed);    // Will read the inputs given in the keypad if false increments by 1
    
     if(checkPassword(password))
-    {  
-      return 1;
+    { 
+      LCDDisp(1);
+      state = '0';
+      laser = '0';
+      return finalState();
     }
-
-    numAttempts++;
-
-    if (numAttempts > 5)
+    
+    if(state == '0' && laser == '1')
     {
-      overrideState(keypressed);    // If given more than 5 attempts you must enter the override code to reset the system
+      lcd.clear();
+    }
+      else
+      { 
+      --numAttempts;
+      LCDDisp(3);
+      laser = '1';
+      state = '1';
+      }
+
+
+    if (numAttempts <= 0)
+    {
+      LCDDisp(2);
+      laser = '1';
+      return finalState();
     }
   }
 }
 
 String readKey(char keypressed)
 {
+  if (state == '0' && laser == '0')
+  {
+    turnOff();
+  }
+  
+  currentState(state);
+  
+  if (state == '0' && laser == '1')
+  {
+    lcd.clear();
+    lcd.print("Disarmed:");
+  }
+  lcd.setCursor(2,1);
   bool enter = true;
   String password;
+  int pressed = 0;
+  char key = keypressed;
   while(enter)
   {
-    elapsed = millis()-timer;
-    if(elapsed>30000)
+    if (pressed > 0)
     {
-      return "666";
-    }  // Essentially we implemented a timer in which failing to enter a code in a specifc time will increment the number of attempts
+      elapsed = millis()-timer;
+      if(elapsed>30000)
+      {
+        return "666";
+      }  // Essentially we implemented a timer in which failing to enter a code in a specifc time will increment the number of attempts
     
-    char key = kpd.waitForKey();//kpd.getKey();
+      char key = kpd.waitForKey();//kpd.getKey();
+      if (pressed > 15)
+      {
+        key = '#';
+      }
+    }
           
     switch(key)
     {
-      case 'A': enter = false; break;  // Enter once done inputting codes
-      case 'C': password = ""; break;  // Clears input
+      case '#': enter = false; break;  // Enter once done inputting codes
+      case '*': password = ""; lcd.clear(); currentState(state); lcd.setCursor(2,1); pressed=0; key = kpd.waitForKey(); break;  // Clears input
       default:
+      pressed++;
       Serial.println(key);
+      LCDPressed(key);
       password += key;   // Reads input and adds it to password
     }
 
@@ -105,14 +150,53 @@ bool checkPassword(String password)
       return false;
   }
 }
-  
-int overrideState(char keypressed)
+
+void currentState(char code)
 {
-  while(readKey(keypressed)!=OVERRIDE)
+  switch(code)
   {
+    case '0': lcd.print("Disarmed:"); if (laser=='1'){lcd.setCursor(2,1); lcd.print("Override State");} break;
+    case '1': lcd.print("Armed:"); break;
   }
-  numAttempts = 0;
-}                 
+
+}
+
+void lcdDisp(int disp)
+{
+  lcd.clear();
+  switch(disp)
+  {
+    case 1: lcd.print("Correct code"); delay(2000); break;
+    case 2:  lcd.print("Armed:");lcd.setCursor(2,1);lcd.print("Terminating"); delay(1000); break;
+    case 3: lcd.print("Incorrect code"); lcd.setCursor(2,1); lcd.print("Attempts left: "); lcd.print(String(numAttempts));  delay(3000); break;
+  }  
+}
+
+void lcdPressed(char key)
+{
+lcd.print(String(key));
+}
+
+void turnOff()
+{
+  lcd.print("Disamred:");
+  while(true)
+  {
+  
+  }
+}
+
+void LCDPressed(char key)
+{
+  lcd.print(String(key));
+}
+
+String finalState()
+{
+  stateToPi+=state;
+  stateToPi+=laser;
+  return stateToPi;  
+}
 
 
   
