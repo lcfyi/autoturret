@@ -20,7 +20,7 @@ const byte ROWS = 4;
 const byte COLS = 4;
 
 // PASSWORD (max attempts: 9)
-const int NUM_ATTEMPTS = 5;
+const int NUM_ATTEMPTS = 3;
 const int NUM_PASSWORDS = 5;
 String database[NUM_PASSWORDS] = {"1234", "6969", "420", "3258", "9993"};
 const String OVERRIDE_CODE = "0000";
@@ -42,28 +42,44 @@ byte rPins[ROWS]= {R0, R1, R2, R3};
 byte cPins[COLS]= {C0, C1, C2, C3};
 Keypad kpd = Keypad(makeKeymap(keymap), rPins, cPins, ROWS, COLS);
 
+// state variables
 int state = 0;
 int lastState = state;
-int numAttempts = NUM_ATTEMPTS;
 
 // LCD setup 
 serLCD lcd(LCDPin);
 
+// function declarations
 void sendState(int state);
 void updateLCD(int state = -1);
 int checkPassword();
+void flushBuffer();
 
+// password and attempt tracking
 String password = "";
 char lastKey = NO_KEY;
+int numAttempts = NUM_ATTEMPTS;
 
 void setup()
 {
   Serial.begin(9600);
+  bool printed = false;
+  delay(2000); // LCD warmup
+  while(Serial.available() == 0)
+  {
+    if(!printed)
+    {
+      lcd.clear();
+      lcd.print("Waiting..");
+    }
+    printed = true;
+  }
   updateLCD(0);
 }
 
 void loop()
 {
+  flushBuffer();
   lastKey = kpd.getKey();
   if(lastKey != NO_KEY)
   {
@@ -103,21 +119,21 @@ void sendState(int s)
     {
       // MODE 0 THREAT 0
       case 0:
-        Serial.println("00");
+        Serial.print("00");
         return;
       // MODE 0 THREAT 1
       case 1:
-        Serial.println("01");
+        Serial.print("01");
         return;
       // MODE 1 THREAT 0 (threat doesn't matter when turret is disabled)
       case 2:
-        Serial.println("10");
+        Serial.print("10");
         return;
     }
   }
 }
 
-void updateLCD(int s = -1)
+void updateLCD(int s)
 {
   switch(s)
   {
@@ -185,5 +201,13 @@ int checkPassword() {
     }
     password = "";
     return state;
+  }
+}
+
+void flushBuffer()
+{
+  while(Serial.available())
+  {
+    int _ = Serial.read();
   }
 }
