@@ -3,6 +3,23 @@
 #include <serLCD.h>
 #include <SoftwareSerial.h>
 
+// STATES:
+// MODE 0 - turret tracking (armed)
+// MODE 1 - turret disabled (disarmed)
+
+// THREAT 0 - laser off (unauthenticated, still has attempts)
+// THREAT 1 - laser on (unauthenticated, no attempts)
+
+// ---------------- STATE 0
+// ARMED -- TRIES:5
+// Code: 
+// ---------------- STATE 1
+// ATTEMPTS REACHED
+// LOCKDOWN MODE ON
+// ---------------- STATE 2
+// DISARMED -- arm
+// system with 000
+
 // -----------------------------------------------------------------------
 // modify globals to tailor to different and setups
 // -----------------------------------------------------------------------
