@@ -179,7 +179,7 @@ lcd.print(String(key));
 
 void turnOff()
 {
-  lcd.print("Disamred:");
+  lcd.print("Disarmed:");
   while(true)
   {
   
