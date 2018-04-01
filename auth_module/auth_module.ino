@@ -3,229 +3,187 @@
 #include <serLCD.h>
 #include <SoftwareSerial.h>
 
-const byte Rows= 4; //number of rows on the keypad i.e. 4
-const byte Cols= 4; //number of columns on the keypad i,e, 3
+// -----------------------------------------------------------------------
+// modify globals to tailor to different and setups
+// -----------------------------------------------------------------------
 
-int numAttempts = 5;
-char state = '1'; // 0 is unarmed 1 is armed.
-char laser = '0';
+// KEYPAD: these go in order as listed from 8 --> 1
+const int R0 = A0;
+const int R1 = A1; 
+const int R2 = A2;
+const int R3 = A3;
+const int C0 = A4; 
+const int C1 = A5;
+const int C2 = 2;
+const int C3 = 3;
+const byte ROWS = 4;
+const byte COLS = 4;
 
-String stateToPi;
+// PASSWORD (max attempts: 9)
+const int NUM_ATTEMPTS = 5;
+const int NUM_PASSWORDS = 5;
+String database[NUM_PASSWORDS] = {"1234", "6969", "420", "3258", "9993"};
+const String OVERRIDE_CODE = "0000";
 
-int timer = millis(); // Amount of time given to user to enter a code before being stuck in an override state
-
-const String OVERRIDE= "0000";
-const int numOfPasswords = 5; // How many passwords that can be stored in our databasae
-String database[numOfPasswords]= { "1234", "6969", "420", "Test", "Test123" };
-
-
+// LCD
 const int LCDPin = 7;
 
-serLCD lcd(LCDPin);
-//we will define the key map as on the key pad:
+// -----------------------------------------------------------------------
 
-char keymap[Rows][Cols]=      
+// keymap and keypad rows
+char keymap[ROWS][COLS] =
 {
-{'1', '2', '3', 'A'},   
+{'1', '2', '3', 'A'},
 {'4', '5', '6', 'B'},
 {'7', '8', '9', 'C'},
 {'*', '0', '#', 'D'}
 };
+byte rPins[ROWS]= {R0, R1, R2, R3};
+byte cPins[COLS]= {C0, C1, C2, C3};
+Keypad kpd = Keypad(makeKeymap(keymap), rPins, cPins, ROWS, COLS);
 
-//  a char array is defined as it can be seen on the above
+int state = 0;
+int lastState = state;
+int numAttempts = NUM_ATTEMPTS;
 
+// LCD setup 
+serLCD lcd(LCDPin);
 
-//keypad connections to the arduino terminals is given as:
-// for mega
-//byte rPins[Rows]= {A0,A1,A2,A3}; //Rows 0 to 3    
-//byte cPins[Cols]= {A4,A5,A6,A7}; //Columns 0 to 2
+void sendState(int state);
+void updateLCD(int state = -1);
+int checkPassword();
 
-// for uno
-byte rPins[Rows] = {A0, A1, A2, A3};
-byte cPins[Cols] = {A4, A5, 2, 3};
-
-
-
-// command for library forkeypad
-//initializes an instance of the Keypad class
-Keypad kpd= Keypad(makeKeymap(keymap), rPins, cPins, Rows, Cols);
-//If key is not equal to 'NO_KEY', then this key is printed out
+String password = "";
+char lastKey = NO_KEY;
 
 void setup()
 {
   Serial.begin(9600);
-  
+  updateLCD(0);
 }
-
 
 void loop()
 {
-
-     currentState(state);
-     lcd.clear();
-     
-     char keypressed = kpd.getKey();
-   
-     if (keypressed != NO_KEY)        // When a key is pressed it'll run the following code.
-     { 
-       
-       String password= readKey(keypressed);    // Will read the inputs given in the keypad if false increments by 1
-       if(checkPassword(password))
-       {
-        LCDDisp(1);
-        state = '0';
-        laser = '0';
-        return finalState();
-       
-        
-       }
-
-       if (state == '0' && laser == '1')
-       {
-          lcd.clear();
-       }
-      else{ 
-      --numAttempts;
-       LCDDisp(3);
-       laser = '1';
-       state ='1';
-      }
-       
-       
-       if (numAttempts <= 0)
-       {
-         LCDDisp(2);
-         laser = '1';
-        return finalState();
-         
-       }
-      
-     }
-
-}
-
-
-
-
-String readKey(char keypressed)
-{
-     if (state == '0' && laser == '0')
-     {
-        turnOff(); 
-     }
-
-     currentState(state);
-
-     if (state == '0' && laser == '1')
-     {
-        lcd.clear(); 
-        lcd.print("Disarmed:");      
-     }
-     
-     lcd.setCursor(2,1);
-      bool enter = true;
-      String password;
-      int pressed = 0;
-      char key = keypressed;
-        while(enter)
-        {
-         
-         if (pressed > 0)
-         {
-         int elapsed = millis()-timer;
-         // if(elapsed>3000){return "666";}  // Essentially we implemented a timer in which failing to enter a code in a specifc time will increment the number of attempts
-            
-            key = kpd.waitForKey();//kpd.getKey();
-            if (pressed > 15)
-              {
-                key = '#';
-              }
-          
-         }
-
-         switch(key)
-            {
-               case '#': enter = false; break;  // Enter once done inputting codes
-               case '*': password = ""; lcd.clear(); currentState(state); lcd.setCursor(2,1); pressed=0; key = kpd.waitForKey(); break;  // Clears input
-               default:
-               pressed++;
-               LCDPressed(key);
-               password += key;   // Reads input and adds it to password
-            }
-
-        }
-        if (state == '0' && laser == '1')
-        {
-          laser = '0';
-          return password;
-        }
-        return password;
-}
-
-
-
-
-bool checkPassword(String password)
-{
- if (password == "666"){return false;}
- if (password == OVERRIDE){state = '0'; laser = '1'; numAttempts = 5; return false;}
-  for (int j=0; j < numOfPasswords ; j++)
+  lastKey = kpd.getKey();
+  if(lastKey != NO_KEY)
   {
-    if( database[j] == password ) // Checks entire database to see if there's a match in the inputted code
+    if(state == 0) updateLCD();
+    if(lastKey == '#')
     {
-      return true; 
-    }
-      return false;
-  } 
-}
-  
-
-void LCDPressed(char key)
-{
-lcd.print(String(key));
-}
-
-
-void LCDDisp(int disp)
-{
-  lcd.clear();
-  switch(disp)
-  {
-    case 1: lcd.print("Correct code"); delay(2000); break;
-    case 2:  lcd.print("Armed:");lcd.setCursor(2,1);lcd.print("Terminating"); delay(1000); break;
-    case 3: lcd.print("Incorrect code"); lcd.setCursor(2,1); lcd.print("Attempts left: "); lcd.print(String(numAttempts));  delay(1); break;
-  }  
-}
-
-
-
-void currentState(char code)
-{
-  switch(code)
-  {
-    case '0': lcd.print("Disarmed:"); if (laser=='1'){lcd.setCursor(2,1); lcd.print("Override State");} break;
-    case '1': lcd.print("Armed:"); break;
+      switch(checkPassword())
+      {
+        case 0:
+          state = 0;
+          updateLCD(state);
+          sendState(state);
+          lastState = state;
+          break;
+        case 1:
+          state = 1;
+          updateLCD(state);
+          sendState(state);
+          lastState = state;
+          break;
+        case 2:
+          state = 2;
+          updateLCD(state);
+          sendState(state);
+          lastState = state;
+          break;
+      }
+    } else password += lastKey;
   }
-
 }
 
-void turnOff()
+void sendState(int s)
 {
- lcd.print("Disarmed:");
- while(true)
- {
-  true;
- }
+  if(s != lastState)
+  {
+    switch(s)
+    {
+      // MODE 0 THREAT 0
+      case 0:
+        Serial.println("00");
+        return;
+      // MODE 0 THREAT 1
+      case 1:
+        Serial.println("01");
+        return;
+      // MODE 1 THREAT 0 (threat doesn't matter when turret is disabled)
+      case 2:
+        Serial.println("10");
+        return;
+    }
+  }
 }
 
-String finalState()
+void updateLCD(int s = -1)
 {
-  stateToPi+=state;
-  stateToPi+=laser;
-  return stateToPi;  
+  switch(s)
+  {
+    case 0:
+      lcd.clear();
+      lcd.print("ARMED -- TRIES:" + String(numAttempts));
+      lcd.print("Code: ");
+      return;
+    case 1: 
+      lcd.clear();
+      lcd.print("ATTEMPTS REACHED");
+      lcd.print("LOCKDOWN MODE ON");
+      return;
+    case 2:
+      lcd.clear();
+      lcd.print("DISARMED -- arm ");
+      lcd.print("system with 0000");
+      return;
+    default:
+      lcd.print(lastKey);
+      return;
+  }
 }
 
-
-
-  
-
+// only called when # is pressed 
+int checkPassword() {
+  if(state == 0) 
+  {
+    numAttempts -= 1;
+    for(int i = 0; i < NUM_PASSWORDS; i++) 
+    {
+      if(database[i] == password)
+      {
+        password = "";
+        numAttempts = NUM_ATTEMPTS;
+        return 2;
+      }
+    }
+    if(numAttempts == 0)
+    {
+      password = "";
+      return 1;
+    }
+    password = "";
+    return state;
+  }
+  else if(state == 1)
+  {
+    if(password == OVERRIDE_CODE) 
+    {
+      password = "";
+      numAttempts = NUM_ATTEMPTS;
+      return 0;
+    }
+    password = "";
+    return state;
+  }
+  else if(state == 2)
+  {
+    if(password == OVERRIDE_CODE)
+    {
+      password = "";
+      numAttempts = NUM_ATTEMPTS;
+      return 0;
+    }
+    password = "";
+    return state;
+  }
+}
