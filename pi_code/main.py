@@ -19,9 +19,10 @@ mode = 0 # default mode for the turret
 ser = None # serial object
 mode = 0 # default mode of 0
 threat = 0 # default threat of 0
-coordThresh = 10
 lastX = 0
+lastW = 0
 lastY = 0
+lastH = 0
 
 # mode 0 for coordinate sending
 # mode 1 to disable turret
@@ -95,10 +96,12 @@ while True:
 
   if temp is not None: # draw boxes around our area of interest
     (x, y, w, h) = cv2.boundingRect(temp)
-    if abs(lastX - (x + w/2)) > w/8:
+    if abs(lastX - (x + w/2)) > lastW/8:
       lastX = x + w/2
-    if abs(lastY - (y + h/2)) > h/6:
+      lastW = w
+    if abs(lastY - (y + h/2)) > lastH/6:
       lastY = y + h/2
+      lastH = h
     #cv2.circle(f, (lastX, lastY), 3, (0, 255, 0), 2)
     cv2.rectangle(f, (x, y), (x + w, y + h), (0, 255, 0), 1)
     sendToArduino(mode, threat, lastX, lastY) #XXX: finish threat logic
