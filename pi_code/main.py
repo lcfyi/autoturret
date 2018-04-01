@@ -6,6 +6,7 @@ import time
 import cv2
 import smbus
 import serial
+import serial.tools.list_ports as lp
 
 # global variables and objects
 bus = smbus.SMBus(1) # smbus 1 on the pi is userfacing
@@ -29,43 +30,58 @@ lastH = 0
 # threat 0 laser is off
 # threat 1 laser is on
 def sendToArduino(mode, threat = 0, x_coord = None, y_coord = None):
-  if mode is 0:
-    try: # try block to catch i2c errors without aborting code 
-      data = [threat]
-      time.sleep(0.05)
-      for n in str(x_coord): # turn numbers into strings 
-        data.append(ord(n))
-      bus.write_i2c_block_data(address, 0, data) # send each char byte to arduino
-      data = [threat]
-      for n in str(y_coord):
-        data.append(ord(n))
-      bus.write_i2c_block_data(address, 1, data)
-      data = [threat]
-      print("[NOTE] Writing x: " + str(x_coord) + ", y: " + str(y_coord))
-    except IOError:
-      print("[NOTE] i2c error")
-      pass
-  elif mode is 1:
-    bus.write_i2c_block_data(address, 2, [threat])
+  try: # try block to catch i2c errors without aborting code 
+    if mode is 0:
+        data = [threat]
+        time.sleep(0.05)
+        for n in str(x_coord): # turn numbers into strings 
+          data.append(ord(n))
+        bus.write_i2c_block_data(address, 0, data) # send each char byte to arduino
+        data = [threat]
+        for n in str(y_coord):
+          data.append(ord(n))
+        bus.write_i2c_block_data(address, 1, data)
+        data = [threat]
+        print("[NOTE] Writing x: " + str(x_coord) + ", y: " + str(y_coord))
+    elif mode is 1:
+      bus.write_i2c_block_data(address, 2, [threat])
+  except IOError:
+    print("[NOTE] i2c error")
+    pass
 
 def readSerial():
-  # global variables
-  global mode
-  global threat
-  global ser
-  # check serial, default state gets returned if no update or no serial connection
-  if ser is None:
-    return
-  while ser.in_waiting:
-    mode_and_threat = int(ser.readline())
-    mode = mode_and_threat % 10
-    threat = int(math.floor(mode_and_threat / 10)) % 10
+  try:
+    # global variables
+    global mode
+    global threat
+    global ser
+    ser.write(str(1))
+    if ser.in_waiting:
+      mode_and_threat = int(ser.readline())
+      threat = mode_and_threat % 10
+      mode = int(math.floor(mode_and_threat / 10)) % 10
+      print("[NOTE] Mode updated to " + str(mode))
+      print("[NOTE] Threat updated to " + str(threat))
+  except IOError:
+    print("[NOTE] Serial error")
+    ser = None
+    pass
 
 while True:
+  # establish serial communication before system starts
+  while ser is None:
+    arduinoPorts = [p.device for p in lp.comports() if "ACM" in p.description]
+    try:
+      ser = serial.Serial(arduinoPorts[0], 9600, timeout=0)
+      break
+    except:
+      print("[NOTE] Serial error")
+      continue
+
   f = vs.read() # grab a frame from our threaded pivideostream
   gray = cv2.cvtColor(f, cv2.COLOR_BGR2GRAY) # convert the frame to grayscale
-  gray = cv2.GaussianBlur(gray, (13, 13), 0) # computationally expensive gassian blur
-  
+  gray = cv2.GaussianBlur(gray, (11, 11), 0) # computationally expensive gassian blur
+
   if averageImage is None: # start the average
     averageImage = numpy.float32(gray)
     continue
@@ -74,24 +90,19 @@ while True:
   frameComp = cv2.convertScaleAbs(averageImage) # take the average image and convert it to our comparison img
 
   frameDelta = cv2.absdiff(frameComp, gray) # calculate the delta frame between our avg and current frame
-  threshold = cv2.threshold(frameDelta, 10, 255, cv2.THRESH_BINARY)[1] # return data above threshold
+  threshold = cv2.threshold(frameDelta, 6, 255, cv2.THRESH_BINARY)[1] # return data above threshold
 
-  threshold = cv2.dilate(threshold, None, iterations = 3) # dilate our threshold to fill out holes
-  (cnts, _) = cv2.findContours(threshold, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE) # build our delta areas
+  threshold = cv2.dilate(threshold, None, iterations = 2) # dilate our threshold to fill out holes
+  (cnts, _) = cv2.findContours(threshold.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE) # build our delta areas
 
   temp = None
   for c in cnts:
-    if cv2.contourArea(c) < 500 or cv2.contourArea(c) > 7000: 
+    if cv2.contourArea(c) < 500 or cv2.contourArea(c) > 9000: 
       continue # if contour is bigger than our bounds, ignore
     elif temp is None or cv2.contourArea(c) > cv2.contourArea(temp):
       temp = c # grab the biggest contour that's within our bounds 
 
   # update mode and threat state
-  if ser is None:
-    try:
-      ser = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
-    except:
-      print("[NOTE] Unable to open serial connection.")
   readSerial()
 
   if temp is not None: # draw boxes around our area of interest
