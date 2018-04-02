@@ -4,13 +4,9 @@ import numpy
 import math
 import time
 import cv2
-import smbus
 import serial
 import serial.tools.list_ports as lp
-
-# global variables and objects
-bus = smbus.SMBus(1) # smbus 1 on the pi is userfacing
-address = 0x08 # address of the Arduino
+import pigpio
 
 vs = PiVideoStream().start() # starting our video stream 
 time.sleep(1)
@@ -24,34 +20,36 @@ lastX = 0
 lastW = 0
 lastY = 0
 lastH = 0
-written = False
+
+tilt = 6
+pan = 5
+
+piPin = pigpio.pi()
+
+
+# designed specifically for parallax standard servos
+def servoControl(servo, angle):
+  #map 515 to 2250
+  eachAngle = (2450-515)/180
+  piPin.set_servo_pulsewidth(servo, int(515 + angle*eachAngle))
+
+def coordMap(num, oldLow, oldHigh, newLow, newHigh):
+  oldRange = oldHigh - oldLow
+  newRange = newHigh - newLow
+  return (newLow + num * newRange/oldRange)
 
 # mode 0 for coordinate sending
 # mode 1 to disable turret
 # threat 0 laser is off
 # threat 1 laser is on
-def sendToArduino(mode, threat, x_coord, y_coord):
-  global written
-  try: # try block to catch i2c errors without aborting code 
-    if mode is 0:
-        written = False
-        data = [threat]
-        for n in str(x_coord): # turn numbers into strings 
-          data.append(ord(n))
-        bus.write_i2c_block_data(address, 0, data) # send each char byte to arduino
-        time.sleep(0.1)
-        data = [threat]
-        for n in str(y_coord):
-          data.append(ord(n))
-        bus.write_i2c_block_data(address, 1, data)
-        time.sleep(0.1)
-        data = [threat]
-        print("[NOTE] Writing x: " + str(x_coord) + ", y: " + str(y_coord))
-    elif mode is 1:
-      return
-  except IOError:
-    print("[NOTE] i2c error")
-    pass
+def adjustAngle(mode, threat, x_coord, y_coord):
+  if mode is 0:
+    servoControl(pan, coordMap(x_coord, 1, 320, 105, 25))
+    servoControl(tilt, coordMap(y_coord, 1, 240, 55, 110))
+    print("[NOTE] Writing x: " + str(x_coord) + ", y: " + str(y_coord))
+  elif mode is 1:
+    return
+
 
 def readSerial():
   try:
@@ -119,7 +117,7 @@ while True:
       lastH = h
     #cv2.circle(f, (lastX, lastY), 3, (0, 255, 0), 2)
     cv2.rectangle(f, (x, y), (x + w, y + h), (0, 255, 0), 1)
-    sendToArduino(mode, threat, lastX, lastY) #XXX: finish threat logic
+    adjustAngle(mode, threat, lastX, lastY) #XXX: finish threat logic
   cv2.circle(f, (lastX, lastY), 3, (0, 255, 0), 2)
 
   # XXX: increase computational capacity by deleting the draw later

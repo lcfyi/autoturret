@@ -31,3 +31,6 @@ sudo apt-get install python-opencv
 
 # make it easier to find the pi 
 sudo apt-get install samba
+
+# for pigpio support
+sudo apt-get install pigpio
