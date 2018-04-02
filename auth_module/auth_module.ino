@@ -36,6 +36,8 @@ const int C3 = 3;
 const byte ROWS = 4;
 const byte COLS = 4;
 
+const int ledPin = 11;
+
 // PASSWORD (max attempts: 9)
 const int NUM_ATTEMPTS = 3;
 const int NUM_PASSWORDS = 5;
@@ -79,6 +81,7 @@ int numAttempts = NUM_ATTEMPTS;
 
 void setup()
 {
+  pinMode(ledPin, OUTPUT);
   Serial.begin(9600);
   bool printed = false;
   delay(2000); // LCD warmup
@@ -107,17 +110,20 @@ void loop()
       {
         case 0:
           state = 0;
+          digitalWrite(ledPin, LOW);
           updateLCD(state);
           sendState(state);
           lastState = state;
           break;
         case 1:
+          digitalWrite(ledPin, HIGH);
           state = 1;
           updateLCD(state);
           sendState(state);
           lastState = state;
           break;
         case 2:
+          digitalWrite(ledPin, LOW);
           state = 2;
           updateLCD(state);
           sendState(state);
