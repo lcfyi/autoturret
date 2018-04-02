@@ -24,27 +24,31 @@ lastX = 0
 lastW = 0
 lastY = 0
 lastH = 0
+written = False
 
 # mode 0 for coordinate sending
 # mode 1 to disable turret
 # threat 0 laser is off
 # threat 1 laser is on
-def sendToArduino(mode, threat = 0, x_coord = None, y_coord = None):
+def sendToArduino(mode, threat, x_coord, y_coord):
+  global written
   try: # try block to catch i2c errors without aborting code 
     if mode is 0:
+        written = False
         data = [threat]
-        time.sleep(0.05)
         for n in str(x_coord): # turn numbers into strings 
           data.append(ord(n))
         bus.write_i2c_block_data(address, 0, data) # send each char byte to arduino
+        time.sleep(0.1)
         data = [threat]
         for n in str(y_coord):
           data.append(ord(n))
         bus.write_i2c_block_data(address, 1, data)
+        time.sleep(0.1)
         data = [threat]
         print("[NOTE] Writing x: " + str(x_coord) + ", y: " + str(y_coord))
     elif mode is 1:
-      bus.write_i2c_block_data(address, 2, [threat])
+      return
   except IOError:
     print("[NOTE] i2c error")
     pass
@@ -86,7 +90,7 @@ while True:
     averageImage = numpy.float32(gray)
     continue
 
-  cv2.accumulateWeighted(gray, averageImage, 0.3) # accumulate the average frame
+  cv2.accumulateWeighted(gray, averageImage, 0.4) # accumulate the average frame
   frameComp = cv2.convertScaleAbs(averageImage) # take the average image and convert it to our comparison img
 
   frameDelta = cv2.absdiff(frameComp, gray) # calculate the delta frame between our avg and current frame
@@ -111,7 +115,7 @@ while True:
       lastX = x + w/2
       lastW = w
     if abs(lastY - (y + h/2)) > lastH/6:
-      lastY = y + h/2
+      lastY = y + h/3
       lastH = h
     #cv2.circle(f, (lastX, lastY), 3, (0, 255, 0), 2)
     cv2.rectangle(f, (x, y), (x + w, y + h), (0, 255, 0), 1)
