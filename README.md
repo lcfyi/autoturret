@@ -4,7 +4,7 @@
 This project aims to leverage a Raspberry Pi to process an detect motion in a frame; this motion data is then sent to an Arduino where it will control two servos to point toward the motion.
 
 The general flow of the system is as follows:
-![Flowchart](./assets/flowchart.svg)
+![Flowchart](./assets/diag.svg)
 
 The most important thing to note from the diagram is that the serial connection is two-way, while the i2c connection is one-way slave to master. 
 
