@@ -79,8 +79,9 @@ def readSerial():
       mode_and_threat = int(ser.readline())
       threat = mode_and_threat % 10
       mode = int(math.floor(mode_and_threat / 10)) % 10
-      print("[NOTE] Mode updated to " + str(mode))
-      print("[NOTE] Threat updated to " + str(threat))
+      if debugMode:
+        print("[NOTE] Mode updated to " + str(mode))
+        print("[NOTE] Threat updated to " + str(threat))
   except IOError:
     print("[NOTE] Serial error")
     ser = None
