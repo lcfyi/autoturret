@@ -4,35 +4,8 @@
 This project aims to leverage a Raspberry Pi to process an detect motion in a frame; this motion data is then sent to an Arduino where it will control two servos to point toward the motion.
 
 The general flow of the system is as follows:
+![Flowchart](./assets/flowchart.svg)
 
-```mermaid
-graph LR
-subgraph Servo Slave
-isr["i2c onReceive() event"]
-interrupt["receiveCoords()"]
-isr --> interrupt
-end
-subgraph Rasberry Pi
-main["main loop"]
-sendToArduino["sendToArduino()"]
-readSerial["readSerial()"]
-main -- movement detected --> sendToArduino
-main --> readSerial
-readSerial --> main
-end
-subgraph Auth Arduino
-loop["loop()"]
-sendstate["sendState()"]
-updatelcd["updateLCD()"]
-checkPassword["checkPassword()"]
-loop -- "when # pressed" --> checkPassword
-loop -- "send appropriate state" --> sendstate
-loop -- "send appropriate state" --> updatelcd
-end
-sendToArduino --> isr
-readSerial --> loop
-sendstate --> readSerial
-```
 The most important thing to note from the diagram is that the serial connection is two-way, while the i2c connection is one-way slave to master. 
 
 # Raspberry Pi Setup Notes
