@@ -1,5 +1,4 @@
-# imports 
-from imutils.video.pivideostream import PiVideoStream # juicy threading support
+from imutils.video.pivideostream import PiVideoStream
 import numpy
 import math
 import time
@@ -8,10 +7,25 @@ import smbus
 import serial
 import serial.tools.list_ports as lp
 
-# global variables and objects
-bus = smbus.SMBus(1) # smbus 1 on the pi is userfacing
-address = 0x08 # address of the Arduino
+# -----------------------------------------------------------------------
+# modify globals to tailor to different setups
+# -----------------------------------------------------------------------
 
+address = 0x08 # address of the Arduino
+gassianBlurAmount = 11
+accumulateWeight = 0.5
+acceptableDelta = 7
+dilateIterations = 2
+minArea = 500
+maxArea = 9000
+xJitterAmount = 12
+yJitterAmount = 9
+debugMode = False
+
+# -----------------------------------------------------------------------
+
+
+bus = smbus.SMBus(1)
 vs = PiVideoStream().start() # starting our video stream 
 time.sleep(1)
 frameComp = None # comparison frame 
@@ -46,7 +60,8 @@ def sendToArduino(mode, threat, x_coord, y_coord):
         bus.write_i2c_block_data(address, 1, data)
         time.sleep(0.1)
         data = [threat]
-        print("[NOTE] Writing x: " + str(x_coord) + ", y: " + str(y_coord))
+        if debugMode:
+          print("[NOTE] Writing x: " + str(x_coord) + ", y: " + str(y_coord))
     elif mode is 1:
       return
   except IOError:
@@ -84,24 +99,24 @@ while True:
 
   f = vs.read() # grab a frame from our threaded pivideostream
   gray = cv2.cvtColor(f, cv2.COLOR_BGR2GRAY) # convert the frame to grayscale
-  gray = cv2.GaussianBlur(gray, (11, 11), 0) # computationally expensive gassian blur
+  gray = cv2.GaussianBlur(gray, (gassianBlurAmount, gassianBlurAmount), 0) # computationally expensive gassian blur
 
   if averageImage is None: # start the average
     averageImage = numpy.float32(gray)
     continue
 
-  cv2.accumulateWeighted(gray, averageImage, 0.4) # accumulate the average frame
+  cv2.accumulateWeighted(gray, averageImage, accumulateWeight) # accumulate the average frame
   frameComp = cv2.convertScaleAbs(averageImage) # take the average image and convert it to our comparison img
 
   frameDelta = cv2.absdiff(frameComp, gray) # calculate the delta frame between our avg and current frame
-  threshold = cv2.threshold(frameDelta, 6, 255, cv2.THRESH_BINARY)[1] # return data above threshold
+  threshold = cv2.threshold(frameDelta, acceptableDelta, 255, cv2.THRESH_BINARY)[1] # return data above threshold
 
-  threshold = cv2.dilate(threshold, None, iterations = 2) # dilate our threshold to fill out holes
+  threshold = cv2.dilate(threshold, None, iterations = dilateIterations) # dilate our threshold to fill out holes
   (cnts, _) = cv2.findContours(threshold.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE) # build our delta areas
 
   temp = None
   for c in cnts:
-    if cv2.contourArea(c) < 500 or cv2.contourArea(c) > 9000: 
+    if cv2.contourArea(c) < minArea or cv2.contourArea(c) > maxArea: 
       continue # if contour is bigger than our bounds, ignore
     elif temp is None or cv2.contourArea(c) > cv2.contourArea(temp):
       temp = c # grab the biggest contour that's within our bounds 
@@ -111,21 +126,21 @@ while True:
 
   if temp is not None: # draw boxes around our area of interest
     (x, y, w, h) = cv2.boundingRect(temp)
-    if abs(lastX - (x + w/2)) > lastW/8:
+    if abs(lastX - (x + w/2)) > lastW/xJitterAmount:
       lastX = x + w/2
       lastW = w
-    if abs(lastY - (y + h/2)) > lastH/6:
+    if abs(lastY - (y + h/3)) > lastH/yJitterAmount:
       lastY = y + h/3
       lastH = h
-    #cv2.circle(f, (lastX, lastY), 3, (0, 255, 0), 2)
-    cv2.rectangle(f, (x, y), (x + w, y + h), (0, 255, 0), 1)
-    sendToArduino(mode, threat, lastX, lastY) #XXX: finish threat logic
-  cv2.circle(f, (lastX, lastY), 3, (0, 255, 0), 2)
+    if debugMode:
+      cv2.rectangle(f, (x, y), (x + w, y + h), (0, 255, 0), 1)
+    sendToArduino(mode, threat, lastX, lastY)
 
-  # XXX: increase computational capacity by deleting the draw later
-  cv2.imshow("Frames", f)
-  cv2.imshow("Thresh", threshold)
-  cv2.imshow("frame delta", frameDelta)
-  cv2.imshow("avg", frameComp)
+  if debugMode:
+    cv2.circle(f, (lastX, lastY), 3, (0, 255, 0), 2)
+    cv2.imshow("Frames", f)
+    cv2.imshow("Thresh", threshold)
+    cv2.imshow("frame delta", frameDelta)
+    cv2.imshow("avg", frameComp)
 
   key = cv2.waitKey(1) & 0xFF
