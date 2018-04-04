@@ -54,12 +54,10 @@ def sendToArduino(mode, threat, x_coord, y_coord):
         for n in str(x_coord): # turn numbers into strings 
           data.append(ord(n))
         bus.write_i2c_block_data(address, 0, data) # send each char byte to arduino
-        time.sleep(0.1)
         data = [threat]
         for n in str(y_coord):
           data.append(ord(n))
         bus.write_i2c_block_data(address, 1, data)
-        time.sleep(0.1)
         data = [threat]
         if debugMode:
           print("[NOTE] Writing x: {0}, y: {1}".format(x_coord, y_coord))
@@ -129,11 +127,11 @@ while True:
 
   # fill in the holes and find the contours
   threshold = cv2.dilate(threshold, None, iterations = dilateIterations)
-  (cnts, _) = cv2.findContours(threshold.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE) 
+  contours = cv2.findContours(threshold.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]
 
   # find the biggest contour within our range
   temp = None
-  for c in cnts:
+  for c in contours:
     if cv2.contourArea(c) < minArea or cv2.contourArea(c) > maxArea: 
       continue
     elif temp is None or cv2.contourArea(c) > cv2.contourArea(temp):
