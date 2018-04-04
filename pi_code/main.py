@@ -141,6 +141,9 @@ while True:
     if debugMode:
       cv2.rectangle(f, (x, y), (x + w, y + h), (0, 255, 0), 1)
     sendToArduino(mode, threat, lastX, lastY)
+  
+  if not written:
+    sendToArduino(mode, threat, 0, 0)
 
   if debugMode:
     cv2.circle(f, (lastX, lastY), 3, (0, 255, 0), 2)
