@@ -62,7 +62,7 @@ def sendToArduino(mode, threat, x_coord, y_coord):
         time.sleep(0.1)
         data = [threat]
         if debugMode:
-          print("[NOTE] Writing x: " + str(x_coord) + ", y: " + str(y_coord))
+          print("[NOTE] Writing x: {0}, y: {1}".format(x_coord, y_coord))
     elif mode is 1:
       if not written:
         bus.write_i2c_block_data(address, 2, [threat])
@@ -85,8 +85,8 @@ def readSerial():
       threat = mode_and_threat % 10
       mode = int(math.floor(mode_and_threat / 10)) % 10
       if debugMode:
-        print("[NOTE] Mode updated to " + str(mode))
-        print("[NOTE] Threat updated to " + str(threat))
+        print("[NOTE] Mode updated to {0}".format(mode))
+        print("[NOTE] Threat updated to {1}".format(threat))
   except IOError:
     print("[NOTE] Serial error")
     ser = None
@@ -103,34 +103,42 @@ while True:
       print("[NOTE] Serial error")
       continue
 
-  f = vs.read() # grab a frame from our threaded pivideostream
-  gray = cv2.cvtColor(f, cv2.COLOR_BGR2GRAY) # convert the frame to grayscale
-  gray = cv2.GaussianBlur(gray, (gassianBlurAmount, gassianBlurAmount), 0) # computationally expensive gassian blur
+  # grab a frame from our threaded pivideostream
+  f = vs.read()
+  # convert the frame to grayscale
+  gray = cv2.cvtColor(f, cv2.COLOR_BGR2GRAY) 
+  gray = cv2.GaussianBlur(gray, (gassianBlurAmount, gassianBlurAmount), 0)
 
-  if averageImage is None: # start the average
+  # initiate the average
+  if averageImage is None: 
     averageImage = numpy.float32(gray)
     continue
 
-  cv2.accumulateWeighted(gray, averageImage, accumulateWeight) # accumulate the average frame
-  frameComp = cv2.convertScaleAbs(averageImage) # take the average image and convert it to our comparison img
+  # accumulate the average and convert it to somethin usable 
+  cv2.accumulateWeighted(gray, averageImage, accumulateWeight) 
+  frameComp = cv2.convertScaleAbs(averageImage)
 
-  frameDelta = cv2.absdiff(frameComp, gray) # calculate the delta frame between our avg and current frame
-  threshold = cv2.threshold(frameDelta, acceptableDelta, 255, cv2.THRESH_BINARY)[1] # return data above threshold
+  # calculate the difference in the frame and return image above threshold
+  frameDelta = cv2.absdiff(frameComp, gray)
+  threshold = cv2.threshold(frameDelta, acceptableDelta, 255, cv2.THRESH_BINARY)[1]
 
-  threshold = cv2.dilate(threshold, None, iterations = dilateIterations) # dilate our threshold to fill out holes
-  (cnts, _) = cv2.findContours(threshold.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE) # build our delta areas
+  # fill in the holes and find the contours
+  threshold = cv2.dilate(threshold, None, iterations = dilateIterations)
+  (cnts, _) = cv2.findContours(threshold.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE) 
 
+  # find the biggest contour within our range
   temp = None
   for c in cnts:
     if cv2.contourArea(c) < minArea or cv2.contourArea(c) > maxArea: 
-      continue # if contour is bigger than our bounds, ignore
+      continue
     elif temp is None or cv2.contourArea(c) > cv2.contourArea(temp):
-      temp = c # grab the biggest contour that's within our bounds 
+      temp = c 
 
-  # update mode and threat state
+  # check for serial update and ping the arduino
   readSerial()
 
-  if temp is not None: # draw boxes around our area of interest
+  # draw boxes around our area of interest, taking into account our jitter reduction
+  if temp is not None:
     (x, y, w, h) = cv2.boundingRect(temp)
     if abs(lastX - (x + w/2)) > lastW/xJitterAmount:
       lastX = x + w/2
@@ -142,14 +150,15 @@ while True:
       cv2.rectangle(f, (x, y), (x + w, y + h), (0, 255, 0), 1)
     sendToArduino(mode, threat, lastX, lastY)
   
+  # update threat state according to new serial input
   if not written:
     sendToArduino(mode, threat, 0, 0)
 
+  # draw things for our debug
   if debugMode:
     cv2.circle(f, (lastX, lastY), 3, (0, 255, 0), 2)
     cv2.imshow("Frames", f)
     cv2.imshow("Thresh", threshold)
     cv2.imshow("frame delta", frameDelta)
     cv2.imshow("avg", frameComp)
-
-  key = cv2.waitKey(1) & 0xFF
+    cv2.waitKey(1)
