@@ -86,7 +86,7 @@ def readSerial():
       mode = int(math.floor(mode_and_threat / 10)) % 10
       if debugMode:
         print("[NOTE] Mode updated to {0}".format(mode))
-        print("[NOTE] Threat updated to {1}".format(threat))
+        print("[NOTE] Threat updated to {0}".format(threat))
   except IOError:
     print("[NOTE] Serial error")
     ser = None
@@ -149,10 +149,6 @@ while True:
     if debugMode:
       cv2.rectangle(f, (x, y), (x + w, y + h), (0, 255, 0), 1)
     sendToArduino(mode, threat, lastX, lastY)
-  
-  # update threat state according to new serial input
-  if not written:
-    sendToArduino(mode, threat, 0, 0)
 
   # draw things for our debug
   if debugMode:
