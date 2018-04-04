@@ -1,3 +1,4 @@
+#!/usr/bin/python
 from imutils.video.pivideostream import PiVideoStream
 import numpy
 import math

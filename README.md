@@ -51,3 +51,11 @@ Install dependencies
     
    This allows ping raspberrypi to respond on Windows.
 
+## Auto run at start
+
+    sudo nano /etc/profile
+
+Add this snippet to the bottom:
+
+    sudo python ~/Desktop/main.py &
+
