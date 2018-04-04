@@ -64,7 +64,9 @@ def sendToArduino(mode, threat, x_coord, y_coord):
         if debugMode:
           print("[NOTE] Writing x: " + str(x_coord) + ", y: " + str(y_coord))
     elif mode is 1:
-      return
+      if not written:
+        bus.write_i2c_block_data(address, 2, [threat])
+        written = True
   except IOError:
     print("[NOTE] i2c error")
     pass
@@ -75,8 +77,10 @@ def readSerial():
     global mode
     global threat
     global ser
+    global written
     ser.write(str(1))
     if ser.in_waiting:
+      written = False
       mode_and_threat = int(ser.readline())
       threat = mode_and_threat % 10
       mode = int(math.floor(mode_and_threat / 10)) % 10
