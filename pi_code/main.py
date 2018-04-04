@@ -68,7 +68,8 @@ def sendToArduino(mode, threat, x_coord, y_coord):
         bus.write_i2c_block_data(address, 2, [threat])
         written = True
   except IOError:
-    print("[NOTE] i2c error")
+    if debugMode:
+      print("[NOTE] i2c error")
     pass
 
 def readSerial():
@@ -88,19 +89,23 @@ def readSerial():
         print("[NOTE] Mode updated to {0}".format(mode))
         print("[NOTE] Threat updated to {0}".format(threat))
   except IOError:
-    print("[NOTE] Serial error")
+    if debugMode:
+      print("[NOTE] Serial error")
     ser = None
     pass
 
 while True:
   # establish serial communication before system starts
   while ser is None:
-    arduinoPorts = [p.device for p in lp.comports() if "ACM" in p.description]
+    arduinoPorts = [p.device for p in lp.comports() if "Mega" in p.description]
     try:
       ser = serial.Serial(arduinoPorts[0], 9600, timeout=0)
+      # wait for the Arduino to power up
+      time.sleep(4)
       break
     except:
-      print("[NOTE] Serial error")
+      if debugMode:
+        print("[NOTE] Serial error")
       continue
 
   # grab a frame from our threaded pivideostream

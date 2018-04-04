@@ -26,13 +26,13 @@
 
 // KEYPAD: these go in order as listed from 8 --> 1
 const int R0 = A0;
-const int R1 = A1; 
+const int R1 = A1;
 const int R2 = A2;
 const int R3 = A3;
 const int C0 = A4; 
 const int C1 = A5;
-const int C2 = 2;
-const int C3 = 3;
+const int C2 = A6;
+const int C3 = A7;
 const byte ROWS = 4;
 const byte COLS = 4;
 
@@ -45,7 +45,7 @@ String database[NUM_PASSWORDS] = {"1234", "6969", "420", "3258", "9993"};
 const String OVERRIDE_CODE = "0000";
 
 // LCD
-const int LCDPin = 7;
+const int LCDPin = 14;
 
 // -----------------------------------------------------------------------
 
@@ -84,7 +84,7 @@ void setup()
   pinMode(ledPin, OUTPUT);
   Serial.begin(9600);
   bool printed = false;
-  delay(2000); // LCD warmup
+  delay(1000);
   while(Serial.available() == 0)
   {
     if(!printed)
@@ -231,6 +231,6 @@ void flushBuffer()
 {
   while(Serial.available())
   {
-    int _ = Serial.read();
+    Serial.read();
   }
 }
