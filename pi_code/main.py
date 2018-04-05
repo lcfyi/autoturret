@@ -67,6 +67,8 @@ def sendToArduino(mode, threat, x_coord, y_coord):
     elif mode is 1:
       if not written:
         bus.write_i2c_block_data(address, 2, [threat])
+        if debugMode:
+          print("[NOTE] Turret disabled")
         written = True
   except IOError:
     if debugMode:
@@ -89,6 +91,9 @@ def readSerial():
       if debugMode:
         print("[NOTE] Mode updated to {0}".format(mode))
         print("[NOTE] Threat updated to {0}".format(threat))
+      # reset laser pointer
+      if mode is 1:
+        sendToArduino(mode, threat, None, None)
   except IOError:
     if debugMode:
       print("[NOTE] Serial error")
