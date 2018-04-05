@@ -7,6 +7,7 @@ import cv2
 import smbus
 import serial
 import serial.tools.list_ports as lp
+import argparse
 
 # -----------------------------------------------------------------------
 # modify globals to tailor to different setups
@@ -21,11 +22,13 @@ minArea = 500
 maxArea = 9000
 xJitterAmount = 12
 yJitterAmount = 9
-debugMode = False
 
 # -----------------------------------------------------------------------
 
-
+parser = argparse.ArgumentParser()
+parser.add_argument("--debug", help="this will print out status messages", action="store_true")
+args = parser.parse_args()
+debugMode = args.debug
 bus = smbus.SMBus(1)
 vs = PiVideoStream().start() # starting our video stream 
 time.sleep(1)
