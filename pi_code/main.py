@@ -14,29 +14,37 @@ import argparse
 # -----------------------------------------------------------------------
 
 address = 0x08 # address of the Arduino
+arduinoSerialName = "Mega"
+
 gassianBlurAmount = 11
 accumulateWeight = 0.5
 acceptableDelta = 7
 dilateIterations = 2
+
 minArea = 500
 maxArea = 9000
+
 xJitterAmount = 12
 yJitterAmount = 9
 
+# -----------------------------------------------------------------------
+# other variables to set up the rest of the code 
 # -----------------------------------------------------------------------
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--debug", help="this will print out status messages", action="store_true")
 args = parser.parse_args()
 debugMode = args.debug
+
 bus = smbus.SMBus(1)
+
 vs = PiVideoStream().start() # starting our video stream 
 time.sleep(1)
+
 frameComp = None # comparison frame 
 averageImage = None # average frame data
 mode = 0 # default mode for the turret 
 ser = None # serial object
-mode = 0 # default mode of 0
 threat = 0 # default threat of 0
 lastX = 0
 lastW = 0
@@ -44,26 +52,29 @@ lastY = 0
 lastH = 0
 written = False
 
-# mode 0 for coordinate sending
-# mode 1 to disable turret
-# threat 0 laser is off
-# threat 1 laser is on
+# -----------------------------------------------------------------------
+# communicate with the Pi through i2c
+# mode 0 for coordinate sending, mode 1 to disable turret
+# threat 0 laser is off, threat 1 laser is on
+# -----------------------------------------------------------------------
 def sendToArduino(mode, threat, x_coord, y_coord):
   global written
   try: # try block to catch i2c errors without aborting code 
     if mode is 0:
-        written = False
-        data = [threat]
-        for n in str(x_coord): # turn numbers into strings 
-          data.append(ord(n))
-        bus.write_i2c_block_data(address, 0, data) # send each char byte to arduino
-        data = [threat]
-        for n in str(y_coord):
-          data.append(ord(n))
-        bus.write_i2c_block_data(address, 1, data)
-        data = [threat]
-        if debugMode:
-          print("[NOTE] Writing x: {0}, y: {1}".format(x_coord, y_coord))
+      written = False
+      data = [threat]
+      # turn numbers into strings 
+      for n in str(x_coord): 
+        data.append(ord(n))
+      # send each char byte to arduino
+      bus.write_i2c_block_data(address, 0, data) 
+      data = [threat]
+      for n in str(y_coord):
+        data.append(ord(n))
+      bus.write_i2c_block_data(address, 1, data)
+      data = [threat]
+      if debugMode:
+        print("[NOTE] Writing x: {0}, y: {1}".format(x_coord, y_coord))
     elif mode is 1:
       if not written:
         bus.write_i2c_block_data(address, 2, [threat])
@@ -75,6 +86,9 @@ def sendToArduino(mode, threat, x_coord, y_coord):
       print("[NOTE] i2c error")
     pass
 
+# -----------------------------------------------------------------------
+# monitor serial input and update state if there are any changes
+# -----------------------------------------------------------------------
 def readSerial():
   try:
     # global variables
@@ -100,10 +114,13 @@ def readSerial():
     ser = None
     pass
 
+# -----------------------------------------------------------------------
+# the code starts at this point; follow each step line by line
+# -----------------------------------------------------------------------
 while True:
-  # establish serial communication before system starts
+  # establish serial communication before system starts or if it gets lost
   while ser is None:
-    arduinoPorts = [p.device for p in lp.comports() if "Mega" in p.description]
+    arduinoPorts = [p.device for p in lp.comports() if arduinoSerialName in p.description]
     try:
       ser = serial.Serial(arduinoPorts[0], 9600, timeout=0)
       # wait for the Arduino to power up
@@ -116,6 +133,7 @@ while True:
 
   # grab a frame from our threaded pivideostream
   f = vs.read()
+
   # convert the frame to grayscale
   gray = cv2.cvtColor(f, cv2.COLOR_BGR2GRAY) 
   gray = cv2.GaussianBlur(gray, (gassianBlurAmount, gassianBlurAmount), 0)
@@ -161,7 +179,7 @@ while True:
       cv2.rectangle(f, (x, y), (x + w, y + h), (0, 255, 0), 1)
     sendToArduino(mode, threat, lastX, lastY)
 
-  # draw things for our debug
+  # draw things for our debug mode 
   if debugMode:
     cv2.circle(f, (lastX, lastY), 3, (0, 255, 0), 2)
     cv2.imshow("Frames", f)
