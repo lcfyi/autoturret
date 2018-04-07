@@ -40,6 +40,8 @@ Install dependencies
 
     sudo pip install numpy
     sudo pip install imutils
+    sudo pip install serial
+    sudo pip install smbus
 
 ## The actual important bit
 
