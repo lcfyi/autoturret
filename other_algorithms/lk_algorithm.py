@@ -6,7 +6,6 @@ import time
 import cv2
 import serial
 import serial.tools.list_ports as lp
-from common import anorm2, draw_str
 from time import clock 
 import argparse
 

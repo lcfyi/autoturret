@@ -28,7 +28,7 @@ xJitterAmount = 12
 yJitterAmount = 9
 
 # -----------------------------------------------------------------------
-# other variables to set up the rest of the code 
+# other variables to set up the rest of the code
 # -----------------------------------------------------------------------
 
 parser = argparse.ArgumentParser()
@@ -38,12 +38,12 @@ debugMode = args.debug
 
 bus = smbus.SMBus(1)
 
-vs = PiVideoStream().start() # starting our video stream 
+vs = PiVideoStream().start() # starting our video stream
 time.sleep(1)
 
-frameComp = None # comparison frame 
+frameComp = None # comparison frame
 averageImage = None # average frame data
-mode = 0 # default mode for the turret 
+mode = 0 # default mode for the turret
 ser = None # serial object
 threat = 0 # default threat of 0
 lastX = 0
@@ -59,15 +59,15 @@ written = False
 # -----------------------------------------------------------------------
 def sendToArduino(mode, threat, x_coord, y_coord):
   global written
-  try: # try block to catch i2c errors without aborting code 
+  try: # try block to catch i2c errors without aborting code
     if mode is 0:
       written = False
       data = [threat]
-      # turn numbers into strings 
-      for n in str(x_coord): 
+      # turn numbers into strings
+      for n in str(x_coord):
         data.append(ord(n))
       # send each char byte to arduino
-      bus.write_i2c_block_data(address, 0, data) 
+      bus.write_i2c_block_data(address, 0, data)
       data = [threat]
       for n in str(y_coord):
         data.append(ord(n))
@@ -135,16 +135,16 @@ while True:
   f = vs.read()
 
   # convert the frame to grayscale
-  gray = cv2.cvtColor(f, cv2.COLOR_BGR2GRAY) 
+  gray = cv2.cvtColor(f, cv2.COLOR_BGR2GRAY)
   gray = cv2.GaussianBlur(gray, (gassianBlurAmount, gassianBlurAmount), 0)
 
   # initiate the average
-  if averageImage is None: 
+  if averageImage is None:
     averageImage = numpy.float32(gray)
     continue
 
-  # accumulate the average and convert it to somethin usable 
-  cv2.accumulateWeighted(gray, averageImage, accumulateWeight) 
+  # accumulate the average and convert it to somethin usable
+  cv2.accumulateWeighted(gray, averageImage, accumulateWeight)
   frameComp = cv2.convertScaleAbs(averageImage)
 
   # calculate the difference in the frame and return image above threshold
@@ -152,16 +152,16 @@ while True:
   threshold = cv2.threshold(frameDelta, acceptableDelta, 255, cv2.THRESH_BINARY)[1]
 
   # fill in the holes and find the contours
-  threshold = cv2.dilate(threshold, None, iterations = dilateIterations)
+  threshold = cv2.dilate(threshold, None, iterations=dilateIterations)
   contours = cv2.findContours(threshold.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]
 
   # find the biggest contour within our range
   temp = None
   for c in contours:
-    if cv2.contourArea(c) < minArea or cv2.contourArea(c) > maxArea: 
+    if cv2.contourArea(c) < minArea or cv2.contourArea(c) > maxArea:
       continue
     elif temp is None or cv2.contourArea(c) > cv2.contourArea(temp):
-      temp = c 
+      temp = c
 
   # check for serial update and ping the arduino
   readSerial()
@@ -179,7 +179,7 @@ while True:
       cv2.rectangle(f, (x, y), (x + w, y + h), (0, 255, 0), 1)
     sendToArduino(mode, threat, lastX, lastY)
 
-  # draw things for our debug mode 
+  # draw things for our debug mode
   if debugMode:
     cv2.circle(f, (lastX, lastY), 3, (0, 255, 0), 2)
     cv2.imshow("Frames", f)
