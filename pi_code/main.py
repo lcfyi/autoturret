@@ -170,10 +170,10 @@ while True:
   if temp is not None:
     (x, y, w, h) = cv2.boundingRect(temp)
     if abs(lastX - (x + w/2)) > lastW/xJitterAmount:
-      lastX = x + w/2
+      lastX = int(x + w/2)
       lastW = w
     if abs(lastY - (y + h/3)) > lastH/yJitterAmount:
-      lastY = y + h/3
+      lastY = int(y + h/3)
       lastH = h
     if debugMode:
       cv2.rectangle(f, (x, y), (x + w, y + h), (0, 255, 0), 1)
