@@ -14,7 +14,7 @@ import argparse
 # -----------------------------------------------------------------------
 
 address = 0x08 # address of the Arduino
-arduinoSerialName = "Mega"
+arduinoSerialName = "ACM"
 
 gassianBlurAmount = 11
 accumulateWeight = 0.5
@@ -144,12 +144,16 @@ while True:
     averageImage = numpy.float32(gray)
     continue
 
-  # accumulate the average and convert it to somethin usable
-  cv2.accumulateWeighted(gray, averageImage, accumulateWeight)
+  # turn our average image into something usable 
   frameComp = cv2.convertScaleAbs(averageImage)
 
-  # calculate the difference in the frame and return image above threshold
+  # calculate the difference in the frame and average image
   frameDelta = cv2.absdiff(frameComp, gray)
+
+  # add our frame to the running average
+  cv2.accumulateWeighted(gray, averageImage, accumulateWeight)
+
+  # find the areas that are above our threshold 
   threshold = cv2.threshold(frameDelta, acceptableDelta, 255, cv2.THRESH_BINARY)[1]
 
   # fill in the holes and find the contours
