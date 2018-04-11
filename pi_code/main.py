@@ -24,8 +24,8 @@ dilateIterations = 2
 minArea = 500
 maxArea = 9000
 
-xJitterAmount = 12
-yJitterAmount = 9
+xJitterAmount = 8
+yJitterAmount = 6
 
 # -----------------------------------------------------------------------
 # other variables to set up the rest of the code
@@ -119,17 +119,18 @@ def readSerial():
 # -----------------------------------------------------------------------
 while True:
   # establish serial communication before system starts or if it gets lost
-  while ser is None:
+  if ser is None:
     arduinoPorts = [p.device for p in lp.comports() if arduinoSerialName in p.description]
     try:
       ser = serial.Serial(arduinoPorts[0], 9600, timeout=0)
       # wait for the Arduino to power up
       time.sleep(4)
-      break
     except:
       if debugMode:
         print("[NOTE] Serial error")
-      continue
+      pass
+  else:
+    readSerial()
 
   # grab a frame from our threaded pivideostream
   f = vs.read()
@@ -162,9 +163,6 @@ while True:
       continue
     elif temp is None or cv2.contourArea(c) > cv2.contourArea(temp):
       temp = c
-
-  # check for serial update and ping the arduino
-  readSerial()
 
   # draw boxes around our area of interest, taking into account our jitter reduction
   if temp is not None:
