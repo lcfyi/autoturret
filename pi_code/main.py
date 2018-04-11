@@ -41,7 +41,6 @@ bus = smbus.SMBus(1)
 vs = PiVideoStream().start() # starting our video stream
 time.sleep(1)
 
-frameComp = None # comparison frame
 averageImage = None # average frame data
 mode = 0 # default mode for the turret
 ser = None # serial object
