@@ -50,6 +50,7 @@ lastW = 0
 lastY = 0
 lastH = 0
 written = False
+changed = True
 
 # -----------------------------------------------------------------------
 # communicate with the Pi through i2c
@@ -173,12 +174,16 @@ while True:
     if abs(lastX - (x + w/2)) > lastW/xJitterAmount:
       lastX = int(x + w/2)
       lastW = w
+      changed = True
     if abs(lastY - (y + h/3)) > lastH/yJitterAmount:
       lastY = int(y + h/3)
       lastH = h
+      changed = True
     if debugMode:
       cv2.rectangle(f, (x, y), (x + w, y + h), (0, 255, 0), 1)
-    sendToArduino(mode, threat, lastX, lastY)
+    if changed:
+      sendToArduino(mode, threat, lastX, lastY)
+      changed = False
 
   # draw things for our debug mode
   if debugMode:
