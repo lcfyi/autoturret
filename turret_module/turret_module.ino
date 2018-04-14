@@ -75,7 +75,7 @@ void receiveCoords(int payload)
   if(num == 0)
   {
     // translate our coordinate to a servo angle (calibrated)
-    transX = map(x, 1, 320, 105, 25);
+    transX = map(x, 1, 320, 100, 40);
     // write that angle to our servo
     pan.write(transX);
   }
@@ -83,7 +83,7 @@ void receiveCoords(int payload)
   if(num == 1) 
   {
     // same process as above
-    transY = map(y, 1, 240, 110, 55);
+    transY = map(y, 1, 240, 105, 70);
     tilt.write(transY);
   }
 
